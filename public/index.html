@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Vision Studio</title>
+    <style>
+        :root {
+            --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
+                Roboto, Helvetica, Arial, sans-serif;
+            --radius-large: 16px;
+            --radius-medium: 12px;
+            --transition-fast: 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+            --transition-slow: 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+            --bg-color: #f5f5f7;
+            --card-bg-color: #ffffff;
+            --text-color-primary: #1d1d1f;
+            --text-color-secondary: #6e6e73;
+            --border-color: #d2d2d7;
+            --accent-color: #007aff;
+            --accent-color-light: #e6f2ff;
+            --shadow-color: rgba(0, 0, 0, 0.05);
+        }
+
+        html.dark {
+            --bg-color: #161617;
+            --card-bg-color: #2c2c2e;
+            --text-color-primary: #f5f5f7;
+            --text-color-secondary: #8e8e93;
+            --border-color: #424245;
+            --accent-color: #0a84ff;
+            --accent-color-light: #1c324b;
+            --shadow-color: rgba(0, 0, 0, 0.2);
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color-primary);
+            margin: 0;
+            padding: 2rem;
+            transition: background-color var(--transition-fast), color var(--transition-fast);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 960px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background-color: var(--card-bg-color);
+            border-radius: var(--radius-large);
+            padding: 2rem;
+            box-shadow: 0 4px 12px var(--shadow-color);
+            transition: background-color var(--transition-fast);
+        }
+
+        header {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
+        }
+
+        label {
+            font-weight: 500;
+            color: var(--text-color-secondary);
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-control {
+            font-size: 1rem;
+            font-family: var(--font-family);
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-medium);
+            background-color: var(--bg-color);
+            color: var(--text-color-primary);
+            transition: all var(--transition-fast);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px var(--accent-color-light);
+        }
+
+        textarea.form-control {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-input-wrapper {
+            min-height: 140px;
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius-medium);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            background-color: var(--bg-color);
+        }
+
+        .file-input-wrapper:hover,
+        .file-input-wrapper.dragover {
+            border-color: var(--accent-color);
+            background-color: var(--accent-color-light);
+        }
+
+        .file-input-wrapper.dragover {
+            transform: scale(1.02);
+        }
+
+        .file-input-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--text-color-secondary);
+            pointer-events: none;
+        }
+
+        .file-input-content svg {
+            width: 32px;
+            height: 32px;
+            stroke-width: 1.5;
+        }
+
+        .file-input-content span {
+            font-weight: 500;
+        }
+
+        .file-input-content small {
+            font-size: 0.8rem;
+        }
+
+        .btn {
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: var(--radius-medium);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.1);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary:disabled {
+            background-color: var(--border-color);
+            color: var(--text-color-secondary);
+            cursor: not-allowed;
+        }
+
+        .preview-area {
+            margin-top: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .preview-box {
+            position: relative;
+            background: var(--bg-color);
+            border-radius: var(--radius-medium);
+            overflow: hidden;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: background-color var(--transition-fast);
+            padding: 1rem;
+        }
+
+        .preview-box h3 {
+            font-size: 1rem;
+            font-weight: 500;
+            margin: 0 0 1rem 0;
+            color: var(--text-color-secondary);
+            width: 100%;
+            text-align: center;
+        }
+
+        .preview-box .image-container {
+            flex-grow: 1;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .preview-box.has-image .image-container {
+            cursor: zoom-in;
+        }
+
+        .preview-box img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            opacity: 0;
+            transform: scale(0.95);
+            transition: opacity var(--transition-slow), transform var(--transition-slow);
+        }
+
+        .preview-box img.loaded {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .preview-box .placeholder {
+            color: var(--border-color);
+            transition: opacity var(--transition-fast), visibility var(--transition-fast);
+            position: absolute;
+        }
+
+        .preview-box.has-image .placeholder {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            inset: 0;
+            background-color: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity var(--transition-fast), visibility var(--transition-fast);
+            z-index: 10;
+            gap: 1rem;
+        }
+
+        html.dark .loading-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .loading-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 5px solid var(--accent-color-light);
+            border-bottom-color: var(--accent-color);
+            border-radius: 50%;
+            display: inline-block;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        #loading-text {
+            font-weight: 500;
+            color: var(--text-color-secondary);
+            font-size: 0.9rem;
+        }
+
+        .image-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 1rem;
+            min-height: 228px;
+        }
+
+        .list-item {
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+            border-radius: var(--radius-medium);
+            aspect-ratio: 1 / 1;
+            box-shadow: 0 2px 6px var(--shadow-color);
+        }
+
+        .list-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform var(--transition-slow);
+        }
+
+        .list-item:hover img {
+            transform: scale(1.1);
+        }
+
+        .list-item .overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: flex-end;
+            opacity: 0;
+            transition: opacity var(--transition-fast);
+            pointer-events: none;
+        }
+
+        .list-item:hover .overlay {
+            opacity: 1;
+        }
+
+        .list-item .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            pointer-events: auto;
+        }
+
+        .list-item .action-btn {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(4px);
+            color: #333;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform var(--transition-fast);
+        }
+
+        .list-item .action-btn.btn-download {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .list-item .action-btn:hover {
+            transform: scale(1.1);
+            background: rgba(255, 255, 255, 1);
+        }
+
+        .mode-selector {
+            display: flex;
+            background-color: var(--bg-color);
+            border-radius: var(--radius-medium);
+            padding: 0.25rem;
+            width: fit-content;
+        }
+
+        .mode-selector label {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all var(--transition-fast);
+            color: var(--text-color-secondary);
+            font-weight: 500;
+        }
+
+        .mode-selector input {
+            display: none;
+        }
+
+        .mode-selector input:checked+label {
+            background-color: var(--card-bg-color);
+            color: var(--text-color-primary);
+            box-shadow: 0 2px 6px var(--shadow-color);
+        }
+
+        .theme-switcher {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            color: var(--text-color-secondary);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s cubic-bezier(0.25, 0.1, 0.25, 1), visibility 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+
+        .modal-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            position: relative;
+            width: 90vw;
+            height: 90vh;
+            max-width: 1600px;
+            max-height: 1200px;
+            transform: scale(0.9) translateY(20px);
+            transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.visible .modal-content {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-content img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: var(--radius-medium);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            background-color: transparent;
+            filter: drop-shadow(0px 5px 15px rgba(0, 0, 0, 0.5));
+        }
+
+        .modal-caption {
+            position: absolute;
+            bottom: -3rem;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-top: 0;
+            padding: 0.5rem 1rem;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            font-size: 0.9rem;
+            border-radius: var(--radius-medium);
+            max-width: 80%;
+            text-align: center;
+            word-break: break-word;
+            transition: opacity 0.3s;
+        }
+
+        .modal-close {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 36px;
+            height: 36px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            line-height: 1;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s, background-color 0.2s;
+        }
+
+        .modal-close:hover {
+            transform: scale(1.1) rotate(90deg);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .history-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .pagination .btn {
+            background: var(--bg-color);
+            color: var(--text-color-secondary);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+        }
+
+        .pagination .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: var(--bg-color);
+        }
+
+        #page-info {
+            font-weight: 500;
+            color: var(--text-color-secondary);
+        }
+
+        .form-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: -0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-checkbox label {
+            cursor: pointer;
+            font-weight: normal;
+            color: var(--text-color-secondary);
+        }
+
+        .reusable-uploads {
+            margin-top: 1.5rem;
+            display: none;
+        }
+
+        .reusable-uploads h3 {
+            font-size: 1rem;
+            font-weight: 500;
+            margin: 0 0 0.75rem 0;
+            color: var(--text-color-secondary);
+        }
+
+        .reusable-uploads-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .reusable-uploads-list .list-item {
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+            border-radius: var(--radius-medium);
+            aspect-ratio: 1 / 1;
+            box-shadow: 0 2px 6px var(--shadow-color);
+            border: 2px solid transparent;
+            transition: all var(--transition-fast);
+        }
+
+        .reusable-uploads-list .list-item.selected {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px var(--accent-color-light);
+        }
+
+        .reusable-uploads-list .list-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform var(--transition-slow);
+        }
+
+        .reusable-uploads-list .list-item:hover img:not(.selected) {
+            transform: scale(1.1);
+        }
+
+        .reusable-uploads-list .list-item .overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: flex-end;
+            opacity: 0;
+            transition: opacity var(--transition-fast);
+            pointer-events: none;
+        }
+
+        .reusable-uploads-list .list-item:hover .overlay {
+            opacity: 1;
+        }
+
+        .reusable-uploads-list .list-item .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            pointer-events: auto;
+        }
+
+        .error-message,
+        .placeholder-message {
+            color: var(--text-color-secondary);
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 2rem 0;
+        }
+
+        /* ... 在 style 标签底部添加 ... */
+        #multi-preview-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 0.75rem;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            align-content: flex-start;
+            /* 让内容从顶部开始排列 */
+        }
+
+        .thumb-preview {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1/1;
+            border-radius: var(--radius-medium);
+            overflow: hidden;
+        }
+
+        .thumb-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transform: scale(0.9);
+            transition: all var(--transition-slow);
+        }
+
+        .thumb-preview img.loaded {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* 当预览区有图片时，隐藏 placeholder */
+        #original-box.has-image #multi-preview-container .placeholder {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>AI Vision Studio</h1>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div id="user-info"
+                    style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-color-secondary); font-size: 0.9rem;">
+                    <span id="username-display"></span>
+                    <span id="role-badge"
+                        style="padding: 0.25rem 0.5rem; background: var(--accent-color-light); border-radius: 4px; font-size: 0.8rem; color: var(--accent-color);"></span>
+                    <span id="credits-display"
+                        style="padding: 0.25rem 0.75rem; background: var(--bg-color); border-radius: 4px; font-size: 0.85rem; font-weight: 500;">
+                        💎 <span id="credits-value">0</span>
+                    </span>
+                    <span id="free-count-display"
+                        style="padding: 0.25rem 0.75rem; background: var(--bg-color); border-radius: 4px; font-size: 0.85rem;">
+                        免费: <span id="free-count-value">0/5</span>
+                    </span>
+                </div>
+                <button class="btn"
+                    style="padding: 0.5rem 1rem; font-size: 0.9rem; background: var(--bg-color); color: var(--text-color-primary); border: 1px solid var(--border-color);"
+                    onclick="window.location.href='/explore.html'">发现</button>
+                <button class="btn"
+                    style="padding: 0.5rem 1rem; font-size: 0.9rem; background: var(--bg-color); color: var(--text-color-primary); border: 1px solid var(--border-color);"
+                    onclick="window.location.href='/profile'">我的</button>
+                <button id="admin-btn" class="btn"
+                    style="padding: 0.5rem 1rem; font-size: 0.9rem; background: var(--accent-color); color: white; display: none;"
+                    onclick="window.location.href='/admin'">后台管理</button>
+                <button id="logout-btn" class="btn"
+                    style="padding: 0.5rem 1rem; font-size: 0.9rem; background: var(--bg-color); color: var(--text-color-secondary); border: 1px solid var(--border-color);">退出</button>
+                <div class="theme-switcher" id="theme-switcher" title="切换光/暗模式">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content card">
+            <div class="mode-selector">
+                <input type="radio" id="mode-i2i" name="mode" value="image-to-image" checked>
+                <label for="mode-i2i">图生图</label>
+                <input type="radio" id="mode-t2i" name="mode" value="text-to-image">
+                <label for="mode-t2i">文生图</label>
+            </div>
+            <div class="input-group" id="provider-group">
+                <label for="provider-select">模型提供方</label>
+                <select id="provider-select" class="form-control">
+                    <option value="doubao">豆包（推荐）</option>
+                    <option value="nano">Nano</option>
+                </select>
+                <small style="color: var(--text-color-secondary);">文生图和图生图均可选择提供方。</small>
+            </div>
+            <div class="input-group" id="size-group">
+                <label for="size-select">输出尺寸</label>
+                <select id="size-select" class="form-control">
+                    <optgroup label="1:1">
+                        <option value="1024x1024" selected>1024x1024</option>
+                        <option value="2048x2048">2048x2048</option>
+                    </optgroup>
+                    <optgroup label="4:3">
+                        <option value="2304x1728">2304x1728</option>
+                    </optgroup>
+                    <optgroup label="3:4">
+                        <option value="1728x2304">1728x2304</option>
+                    </optgroup>
+                    <optgroup label="16:9">
+                        <option value="2560x1440">2560x1440</option>
+                    </optgroup>
+                    <optgroup label="9:16">
+                        <option value="1440x2560">1440x2560</option>
+                    </optgroup>
+                    <optgroup label="3:2">
+                        <option value="2496x1664">2496x1664</option>
+                    </optgroup>
+                    <optgroup label="2:3">
+                        <option value="1664x2496">1664x2496</option>
+                    </optgroup>
+                    <optgroup label="21:9">
+                        <option value="3024x1296">3024x1296</option>
+                    </optgroup>
+                </select>
+                <small style="color: var(--text-color-secondary);">部分提供方可能不支持所有尺寸，将自动回退。</small>
+            </div>
+            <form id="upload-form">
+                <div class="input-group" id="image-upload-section">
+                    <label for="image-input">1. 上传图片</label>
+                    <label for="image-input" class="file-input-wrapper" id="file-label">
+                        <div class="file-input-content" id="file-label-content">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <!-- ✨ 修改: 更新提示文案以支持多图 -->
+                            <span>点击或拖拽单张/多张图片到这里</span>
+                            <small>最佳尺寸 1024x1024</small>
+                        </div>
+                    </label>
+                    <!-- ✨ 修改: 增加 multiple 属性 -->
+                    <input type="file" id="image-input" name="images" accept="image/*" multiple />
+                    <div class="form-checkbox">
+                        <input type="checkbox" id="keep-original-checkbox" name="keepOriginal" value="true">
+                        <label for="keep-original-checkbox">保留原始图片以便复用</label>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="prompt-input">2. 输入创意描述 (Prompt)</label>
+                    <textarea id="prompt-input" name="prompt" class="form-control"
+                        placeholder="例如：一只戴着墨镜的猫，在赛博朋克风格的东京街头..." required rows="3"></textarea>
+                </div>
+                <button type="submit" id="submit-btn" class="btn btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path
+                            d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.59a2 2 0 0 1-2.83-2.83l8.49-8.48">
+                        </path>
+                    </svg>
+                    立即生成
+                </button>
+            </form>
+
+            <!-- ✨ 关键修复：将可复用图片区域从 form 中移出，放到正确的位置 ✨ -->
+            <div id="reusable-uploads-container" class="reusable-uploads">
+                <h3>或选择一张已上传的图片</h3>
+                <div class="history-controls">
+                    <input type="search" id="reusable-search-input" class="form-control" placeholder="搜索图片名称...">
+                </div>
+                <div id="reusable-uploads-list" class="reusable-uploads-list"></div>
+                <div class="pagination" id="reusable-pagination-controls">
+                    <button id="reusable-prev-page" class="btn">&lt;</button>
+                    <span id="reusable-page-info"></span>
+                    <button id="reusable-next-page" class="btn">&gt;</button>
+                </div>
+            </div>
+
+            <div class="preview-area">
+                <div class="preview-box" id="original-box">
+                    <h3>原始图片</h3>
+                    <!-- ✨ 修改: 整个 image-container 被替换，以支持多图预览 -->
+                    <div class="image-container" id="multi-preview-container">
+                        <!-- 这个容器将由 JS 动态填充 -->
+                        <div class="placeholder">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                <polyline points="21 15 16 10 5 21"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="preview-box" id="generated-box">
+                    <h3>生成结果</h3>
+                    <div class="image-container">
+                        <img id="generated-preview" src="" alt="生成图片预览" />
+                        <div class="placeholder">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="loading-overlay" id="loading-overlay">
+                            <div class="loader"></div>
+                            <div id="loading-text">正在连接AI...</div>
+                        </div>
+                    </div>
+                    <a id="download-link" href="#" download class="btn" style="display:none; margin-top: 1rem;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        下载图片
+                    </a>
+                </div>
+            </div>
+        </main>
+        <aside class="sidebar card">
+            <h2>生成历史</h2>
+            <div class="history-controls">
+                <input type="search" id="search-input" class="form-control" placeholder="按文件名或Prompt搜索...">
+            </div>
+            <div id="image-list" class="image-list"></div>
+            <div class="pagination" id="pagination-controls">
+                <button id="prev-page" class="btn">&lt; 上一页</button>
+                <span id="page-info"></span>
+                <button id="next-page" class="btn">下一页 &gt;</button>
+            </div>
+        </aside>
+    </div>
+
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal-content">
+            <img src="" id="modal-image" alt="放大的图片" />
+            <div class="modal-caption" id="modal-caption"></div>
+        </div>
+        <span class="modal-close" id="modal-close">&times;</span>
+    </div>
+
+    <script src="/js/app.js"></script>
+</body>
+
+</html>

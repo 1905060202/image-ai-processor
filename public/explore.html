@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>发现 - AI Vision Studio</title>
+    <style>
+        :root {
+            --font-stack: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --radius-lg: 16px;
+            --radius-md: 12px;
+
+            /* Light Mode */
+            --bg-body: #f5f5f7;
+            --bg-card: #ffffff;
+            --text-primary: #1d1d1f;
+            --text-secondary: #86868b;
+            --accent: #007aff;
+            --accent-hover: #0062cc;
+            --like-color: #ff3b30;
+            --star-color: #ffcc00;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+        }
+
+        html.dark {
+            --bg-body: #000000;
+            --bg-card: #1c1c1e;
+            --text-primary: #f5f5f7;
+            --text-secondary: #86868b;
+            --accent: #0a84ff;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+            --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-stack);
+            background: var(--bg-body);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        html.dark nav {
+            background: rgba(28, 28, 30, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-brand {
+            font-weight: 700;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+            cursor: pointer;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: var(--text-primary);
+        }
+
+        .nav-link.active {
+            font-weight: 600;
+        }
+
+        /* Masonry Layout */
+        .container {
+            max-width: 1600px;
+            margin: 80px auto 0;
+            padding: 2rem;
+        }
+
+        .masonry {
+            column-count: 5;
+            column-gap: 1.5rem;
+        }
+
+        @media (max-width: 1400px) {
+            .masonry {
+                column-count: 4;
+            }
+        }
+
+        @media (max-width: 1100px) {
+            .masonry {
+                column-count: 3;
+            }
+        }
+
+        @media (max-width: 800px) {
+            .masonry {
+                column-count: 2;
+            }
+        }
+
+        @media (max-width: 500px) {
+            .masonry {
+                column-count: 1;
+            }
+        }
+
+        .pin {
+            break-inside: avoid;
+            margin-bottom: 1.5rem;
+            position: relative;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            background: var(--bg-card);
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: zoom-in;
+        }
+
+        .pin:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .pin img {
+            width: 100%;
+            display: block;
+            /* background: #eee; placeholder color */
+        }
+
+        /* Overlay & Actions */
+        .pin-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, transparent 40%);
+            opacity: 0;
+            transition: opacity 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 1rem;
+            color: white;
+        }
+
+        .pin:hover .pin-overlay {
+            opacity: 1;
+        }
+
+        .pin-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .author {
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .actions {
+            display: flex;
+            gap: 0.8rem;
+        }
+
+        .action-btn {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(4px);
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: white;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .action-btn.active.like {
+            background: var(--like-color);
+            color: white;
+        }
+
+        .action-btn.active.fav {
+            background: var(--star-color);
+            color: white;
+        }
+
+        .action-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        /* Loading */
+        .loading-trigger {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 200;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            max-width: 90vw;
+            max-height: 90vh;
+            display: flex;
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+        }
+
+        .modal-image {
+            flex: 2;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-image img {
+            max-width: 100%;
+            max-height: 90vh;
+            object-fit: contain;
+        }
+
+        .modal-sidebar {
+            flex: 1;
+            width: 360px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-author {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-prompt {
+            background: rgba(0, 0, 0, 0.03);
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 2rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .modal-actions {
+            margin-top: auto;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn-lg {
+            flex: 1;
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: transform 0.1s;
+        }
+
+        .btn-lg:active {
+            transform: scale(0.98);
+        }
+
+        .btn-like {
+            background: rgba(255, 59, 48, 0.1);
+            color: var(--like-color);
+        }
+
+        .btn-like.active {
+            background: var(--like-color);
+            color: white;
+        }
+
+        .btn-fav {
+            background: rgba(255, 204, 0, 0.1);
+            color: var(--star-color);
+        }
+
+        .btn-fav.active {
+            background: var(--star-color);
+            color: white;
+        }
+
+        @media (max-width: 900px) {
+            .modal-content {
+                flex-direction: column;
+                width: 100%;
+                height: 100%;
+                border-radius: 0;
+            }
+
+            .modal-image {
+                flex: 1;
+            }
+
+            .modal-sidebar {
+                width: 100%;
+                flex: none;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav>
+        <div class="nav-brand" onclick="location.href='/'">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--accent)">
+                <path
+                    d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z" />
+            </svg>
+            AI Vision Studio
+        </div>
+        <div class="nav-links">
+            <a class="nav-link" onclick="location.href='/'">创作</a>
+            <a class="nav-link active">发现</a>
+            <a class="nav-link" onclick="location.href='/admin'">后台</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="masonry" id="masonry-grid">
+            <!-- Items will be injected here -->
+        </div>
+        <div class="loading-trigger" id="loading-trigger">加载更多...</div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div class="modal-overlay" id="detail-modal" onclick="if(event.target===this) closeModal()">
+        <div class="modal-content">
+            <div class="modal-image">
+                <img id="modal-img" src="" alt="">
+            </div>
+            <div class="modal-sidebar">
+                <div class="modal-author">
+                    <div class="avatar" id="modal-avatar">A</div>
+                    <span id="modal-username">User</span>
+                </div>
+                <div class="modal-prompt" id="modal-prompt"></div>
+                <div class="modal-actions">
+                    <button class="btn-lg btn-like" id="modal-like-btn" onclick="toggleLike(currentDetailId)">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                        </svg>
+                        <span id="modal-like-text">点赞</span>
+                    </button>
+                    <button class="btn-lg btn-fav" id="modal-fav-btn" onclick="toggleFav(currentDetailId)">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                        </svg>
+                        <span id="modal-fav-text">收藏</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let page = 1;
+        let loading = false;
+        let hasMore = true;
+        let currentDetailId = null;
+        const token = localStorage.getItem('token');
+
+        // Init
+        if (!token) location.href = '/login';
+        if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
+
+        loadFeed();
+
+        // Infinite Scroll
+        window.addEventListener('scroll', () => {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
+                if (!loading && hasMore) {
+                    loadFeed();
+                }
+            }
+        });
+
+        async function loadFeed() {
+            loading = true;
+            document.getElementById('loading-trigger').textContent = '正在加载...';
+
+            try {
+                const res = await fetch(`/api/explore?page=${page}&limit=20`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+
+                if (data.feed.length === 0) {
+                    hasMore = false;
+                    document.getElementById('loading-trigger').textContent = '没有更多内容了';
+                    return;
+                }
+
+                renderFeed(data.feed);
+                page++;
+            } catch (e) {
+                console.error(e);
+            } finally {
+                loading = false;
+            }
+        }
+
+        function renderFeed(items) {
+            const grid = document.getElementById('masonry-grid');
+
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'pin';
+                div.onclick = (e) => {
+                    if (!e.target.closest('.action-btn')) openModal(item);
+                };
+
+                div.innerHTML = `
+          <img src="${item.url}" loading="lazy" style="aspect-ratio: ${item.width}/${item.height}">
+          <div class="pin-overlay">
+            <div class="pin-info">
+              <span class="author">@${item.author}</span>
+              <div class="actions">
+                <button class="action-btn like ${item.isLiked ? 'active' : ''}" onclick="toggleLike(${item.id}, this)">
+                  <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                </button>
+                <button class="action-btn fav ${item.isFavorited ? 'active' : ''}" onclick="toggleFav(${item.id}, this)">
+                  <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+                grid.appendChild(div);
+            });
+        }
+
+        // Interactions
+        async function toggleLike(id, btn) {
+            try {
+                const res = await fetch(`/api/explore/images/${id}/like`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+
+                // Update UI
+                const btns = document.querySelectorAll(`.action-btn.like[onclick*="${id}"]`);
+                btns.forEach(b => b.classList.toggle('active', data.liked));
+
+                // Update Modal UI if open
+                if (currentDetailId === id) {
+                    const modalBtn = document.getElementById('modal-like-btn');
+                    modalBtn.classList.toggle('active', data.liked);
+                    document.getElementById('modal-like-text').textContent = data.liked ? '已点赞' : '点赞';
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function toggleFav(id, btn) {
+            try {
+                const res = await fetch(`/api/explore/images/${id}/favorite`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+
+                const btns = document.querySelectorAll(`.action-btn.fav[onclick*="${id}"]`);
+                btns.forEach(b => b.classList.toggle('active', data.favorited));
+
+                if (currentDetailId === id) {
+                    const modalBtn = document.getElementById('modal-fav-btn');
+                    modalBtn.classList.toggle('active', data.favorited);
+                    document.getElementById('modal-fav-text').textContent = data.favorited ? '已收藏' : '收藏';
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        // Modal
+        function openModal(item) {
+            currentDetailId = item.id;
+            document.getElementById('modal-img').src = item.url;
+            document.getElementById('modal-username').textContent = item.author;
+            document.getElementById('modal-avatar').textContent = item.author[0].toUpperCase();
+            document.getElementById('modal-prompt').textContent = item.prompt;
+
+            const likeBtn = document.getElementById('modal-like-btn');
+            likeBtn.classList.toggle('active', item.isLiked);
+            document.getElementById('modal-like-text').textContent = item.isLiked ? '已点赞' : '点赞';
+
+            const favBtn = document.getElementById('modal-fav-btn');
+            favBtn.classList.toggle('active', item.isFavorited);
+            document.getElementById('modal-fav-text').textContent = item.isFavorited ? '已收藏' : '收藏';
+
+            document.getElementById('detail-modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('detail-modal').classList.remove('active');
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>登录 - AI Vision Studio</title>
+  <style>
+    :root {
+      --font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --radius-large: 24px;
+      --radius-medium: 14px;
+      --radius-small: 8px;
+      --transition-spring: 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      
+      /* Light Mode */
+      --bg-color: #fbfbfd;
+      --card-bg: rgba(255, 255, 255, 0.8);
+      --text-primary: #1d1d1f;
+      --text-secondary: #86868b;
+      --accent-color: #0066cc;
+      --accent-hover: #0077ed;
+      --border-color: rgba(0, 0, 0, 0.1);
+      --input-bg: rgba(0, 0, 0, 0.03);
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+      --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.08);
+      --error-color: #ff3b30;
+    }
+
+    html.dark {
+      --bg-color: #000000;
+      --card-bg: rgba(28, 28, 30, 0.8);
+      --text-primary: #f5f5f7;
+      --text-secondary: #86868b;
+      --accent-color: #2997ff;
+      --accent-hover: #47aaff;
+      --border-color: rgba(255, 255, 255, 0.1);
+      --input-bg: rgba(255, 255, 255, 0.05);
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+      --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-color);
+      color: var(--text-primary);
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color var(--transition-smooth);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Ambient Background Animation */
+    body::before, body::after {
+      content: '';
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.15;
+      z-index: -1;
+      animation: float 10s ease-in-out infinite alternate;
+    }
+    body::before {
+      background: var(--accent-color);
+      top: -100px;
+      left: -100px;
+    }
+    body::after {
+      background: #bf5af2;
+      bottom: -100px;
+      right: -100px;
+      animation-delay: -5s;
+    }
+
+    @keyframes float {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(30px, 50px) scale(1.1); }
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 420px;
+      padding: 2rem;
+      perspective: 1000px;
+    }
+
+    .login-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: var(--radius-large);
+      padding: 3rem 2.5rem;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-color);
+      transform-style: preserve-3d;
+      animation: cardEntrance 0.8s var(--transition-spring) forwards;
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+    }
+
+    @keyframes cardEntrance {
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .logo-area {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 15px;
+      font-weight: 400;
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+      position: relative;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 16px;
+      font-size: 16px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-medium);
+      background: var(--input-bg);
+      color: var(--text-primary);
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .form-control:focus {
+      outline: none;
+      background: var(--bg-color);
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.15);
+      transform: scale(1.01);
+    }
+
+    .form-control::placeholder {
+      color: transparent;
+    }
+
+    /* Floating Label */
+    .form-label {
+      position: absolute;
+      left: 16px;
+      top: 16px;
+      color: var(--text-secondary);
+      font-size: 16px;
+      pointer-events: none;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      transform-origin: left top;
+    }
+
+    .form-control:focus + .form-label,
+    .form-control:not(:placeholder-shown) + .form-label {
+      transform: translateY(-10px) scale(0.75);
+      color: var(--accent-color);
+      font-weight: 600;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 16px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius-medium);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-top: 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary {
+      background: var(--accent-color);
+      color: white;
+      box-shadow: 0 4px 12px rgba(0, 102, 204, 0.2);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(0, 102, 204, 0.3);
+    }
+
+    .btn-primary:active {
+      transform: translateY(1px);
+      box-shadow: 0 2px 8px rgba(0, 102, 204, 0.2);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .divider {
+      text-align: center;
+      margin: 2rem 0;
+      position: relative;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .divider::before, .divider::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 40%;
+      height: 1px;
+      background: var(--border-color);
+    }
+    .divider::before { left: 0; }
+    .divider::after { right: 0; }
+
+    .switch-mode {
+      text-align: center;
+      margin-top: 1.5rem;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .switch-mode a {
+      color: var(--accent-color);
+      text-decoration: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .switch-mode a:hover {
+      opacity: 0.8;
+    }
+
+    .error-message {
+      background: rgba(255, 59, 48, 0.1);
+      color: var(--error-color);
+      padding: 12px;
+      border-radius: var(--radius-small);
+      font-size: 13px;
+      margin-bottom: 1rem;
+      display: none;
+      animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    }
+
+    @keyframes shake {
+      10%, 90% { transform: translate3d(-1px, 0, 0); }
+      20%, 80% { transform: translate3d(2px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+      40%, 60% { transform: translate3d(4px, 0, 0); }
+    }
+
+    .theme-toggle {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      background: var(--card-bg);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-color);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: var(--text-primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .theme-toggle:hover {
+      transform: scale(1.1);
+    }
+
+    /* Form Switch Animation */
+    .form-container {
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    .hidden {
+      display: none;
+      opacity: 0;
+      transform: translateX(20px);
+    }
+  </style>
+</head>
+<body>
+  <div class="theme-toggle" id="theme-toggle" title="切换主题">
+    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path>
+    </svg>
+  </div>
+
+  <div class="login-container">
+    <div class="login-card">
+      <div class="logo-area">
+        <h1>AI Vision Studio</h1>
+        <p class="subtitle" id="page-subtitle">登录以继续您的创作之旅</p>
+      </div>
+
+      <div id="error-message" class="error-message"></div>
+
+      <!-- Login Form -->
+      <form id="login-form" class="form-container">
+        <div class="form-group">
+          <input type="text" id="username" class="form-control" placeholder=" " required autocomplete="username">
+          <label for="username" class="form-label">用户名</label>
+        </div>
+        <div class="form-group">
+          <input type="password" id="password" class="form-control" placeholder=" " required autocomplete="current-password">
+          <label for="password" class="form-label">密码</label>
+        </div>
+        <button type="submit" class="btn btn-primary" id="login-btn">登 录</button>
+        
+        <div class="switch-mode">
+          还没有账号？ <a onclick="toggleForm('register')">立即注册</a>
+        </div>
+      </form>
+
+      <!-- Register Form -->
+      <form id="register-form" class="form-container hidden">
+        <div class="form-group">
+          <input type="text" id="reg-username" class="form-control" placeholder=" " required autocomplete="username">
+          <label for="reg-username" class="form-label">用户名</label>
+        </div>
+        <div class="form-group">
+          <input type="password" id="reg-password" class="form-control" placeholder=" " required autocomplete="new-password">
+          <label for="reg-password" class="form-label">密码 (至少6位)</label>
+        </div>
+        <button type="submit" class="btn btn-primary" id="reg-btn">创建账号</button>
+        
+        <div class="switch-mode">
+          已有账号？ <a onclick="toggleForm('login')">返回登录</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Theme Management
+    const themeToggle = document.getElementById('theme-toggle');
+    const html = document.documentElement;
+    
+    function initTheme() {
+      const saved = localStorage.getItem('theme') || 'system';
+      if (saved === 'dark' || (saved === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        html.classList.add('dark');
+      }
+    }
+    
+    themeToggle.addEventListener('click', () => {
+      html.classList.toggle('dark');
+      localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+    });
+    
+    initTheme();
+
+    // Form Switching
+    function toggleForm(type) {
+      const loginForm = document.getElementById('login-form');
+      const regForm = document.getElementById('register-form');
+      const subtitle = document.getElementById('page-subtitle');
+      const errorEl = document.getElementById('error-message');
+      
+      errorEl.style.display = 'none';
+      
+      if (type === 'register') {
+        loginForm.style.opacity = '0';
+        loginForm.style.transform = 'translateX(-20px)';
+        setTimeout(() => {
+          loginForm.classList.add('hidden');
+          regForm.classList.remove('hidden');
+          // Trigger reflow
+          void regForm.offsetWidth;
+          regForm.style.opacity = '1';
+          regForm.style.transform = 'translateX(0)';
+        }, 200);
+        subtitle.textContent = '创建新账号以开始使用';
+      } else {
+        regForm.style.opacity = '0';
+        regForm.style.transform = 'translateX(20px)';
+        setTimeout(() => {
+          regForm.classList.add('hidden');
+          loginForm.classList.remove('hidden');
+          void loginForm.offsetWidth;
+          loginForm.style.opacity = '1';
+          loginForm.style.transform = 'translateX(0)';
+        }, 200);
+        subtitle.textContent = '登录以继续您的创作之旅';
+      }
+    }
+
+    // API Interaction
+    function showError(msg) {
+      const el = document.getElementById('error-message');
+      el.textContent = msg;
+      el.style.display = 'block';
+      // Re-trigger animation
+      el.style.animation = 'none';
+      el.offsetHeight; /* trigger reflow */
+      el.style.animation = null; 
+    }
+
+    async function handleAuth(url, body, btnId) {
+      const btn = document.getElementById(btnId);
+      const originalText = btn.textContent;
+      
+      try {
+        btn.disabled = true;
+        btn.textContent = '处理中...';
+        
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok) throw new Error(data.error || '操作失败');
+        
+        return data;
+      } catch (err) {
+        showError(err.message);
+        throw err;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    }
+
+    // Login Handler
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      
+      try {
+        const data = await handleAuth('/api/auth/login', { username, password }, 'login-btn');
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('username', data.username);
+        localStorage.setItem('role', data.role);
+        window.location.href = '/';
+      } catch (e) {}
+    });
+
+    // Register Handler
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('reg-username').value;
+      const password = document.getElementById('reg-password').value;
+      
+      if (password.length < 6) {
+        showError('密码长度至少为6位');
+        return;
+      }
+      
+      try {
+        await handleAuth('/api/auth/register', { username, password }, 'reg-btn');
+        // Auto login after register
+        const loginData = await handleAuth('/api/auth/login', { username, password }, 'reg-btn');
+        localStorage.setItem('token', loginData.token);
+        localStorage.setItem('username', loginData.username);
+        localStorage.setItem('role', loginData.role);
+        window.location.href = '/';
+      } catch (e) {}
+    });
+  </script>
+</body>
+</html>
