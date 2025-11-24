@@ -1,32 +1,60 @@
-# 步骤 1: 依然使用我们可以成功拉取的 postgres:15-alpine 作为基础
-FROM postgres:15-alpine
+# ========================================
+# 多阶段构建 Dockerfile - Vue3 项目
+# ========================================
 
-# 步骤 2: 更换 Alpine 的软件源为国内镜像 (关键修复)
-# a. `sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g'` 这个命令会查找源配置文件中官方地址，并替换为阿里云镜像地址
-# b. `&&` 符号确保命令按顺序执行
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+# ============ 阶段 1: 构建前端 ============
+FROM node:20-alpine AS frontend-builder
 
-# 步骤 3: 现在，从高速的国内镜像源安装 Node.js 和 npm
-# a. `apk update` 更新包列表 (现在会从阿里云更新)
-# b. `apk add --no-cache nodejs npm` 安装 nodejs 和 npm
-RUN apk update && apk add --no-cache nodejs npm
+WORKDIR /app/frontend
 
-# 步骤 4: 之后的所有步骤和之前完全一样
-# 设置工作目录
-WORKDIR /usr/src/app
+# 复制前端依赖文件
+COPY frontend/package*.json ./
 
-# 复制 package.json 和 package-lock.json
-COPY package*.json ./
-
-# 安装依赖。为了加速 npm，我们可以临时将会话的 npm registry 也指向淘宝镜像
+# 安装前端依赖（使用国内镜像加速）
 RUN npm config set registry https://registry.npmmirror.com && \
     npm install
 
-# 复制项目所有文件到工作目录
-COPY . .
+# 复制前端源码
+COPY frontend/ ./
+
+# 构建前端生产版本
+RUN npm run build
+
+# 构建产物在 /app/frontend/dist
+
+
+# ============ 阶段 2: 构建最终镜像 ============
+FROM node:20-alpine AS final
+
+# 设置工作目录
+WORKDIR /usr/src/app
+
+# 复制后端 package.json
+COPY package*.json ./
+
+# 安装后端生产依赖（使用国内镜像加速）
+RUN npm config set registry https://registry.npmmirror.com && \
+    npm install --only=production
+
+# 复制后端源码
+COPY lib/ ./lib/
+COPY routes/ ./routes/
+COPY middleware/ ./middleware/
+COPY server.js ./
+COPY .env.example ./
+
+# 从前端构建阶段复制构建产物
+COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
+
+# 创建必要的目录
+RUN mkdir -p generated public/uploads
 
 # 暴露应用运行的端口
 EXPOSE 3000
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # 容器启动时运行的命令
 CMD [ "node", "server.js" ]

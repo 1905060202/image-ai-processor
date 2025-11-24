@@ -47,31 +47,20 @@ app.use('/api/credits', creditsRoutes);
 app.use('/api/explore', require('./routes/explore'));
 app.use('/api/profile', require('./routes/profile'));
 
-// --- 登录页面路由 ---
-app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
 
-// --- 后台管理页面路由 ---
-app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
 
-// --- 发现页面路由 ---
-app.get('/explore', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'explore.html'));
-});
+// Serve static files from Vue build
+app.use(express.static(path.join(__dirname, 'frontend/dist')));
 
-// --- 个人主页路由 ---
-app.get('/profile', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'profile.html'));
-});
+// Serve generated images
+app.use('/generated', express.static(path.join(__dirname, 'generated')));
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
-// --- 修复点：为根路径 '/' 提供前端主页面 ---
-// 这将确保访问 http://localhost:3000 时返回 index.html
-app.get('/', (req, res) => {
-  // 确保您的 index.html 位于 public 文件夹内
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// API Routes (already registered above)
+
+// Catch-all route for SPA
+app.use((req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend/dist/index.html'));
 });
 
 
