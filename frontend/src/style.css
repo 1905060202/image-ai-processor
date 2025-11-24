@@ -13,13 +13,13 @@
   --transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text-primary: rgba(255, 255, 255, 0.87);
-    --text-secondary: rgba(255, 255, 255, 0.6);
-    --bg-primary: #1e1e1e;
-    --bg-secondary: #2d2d2d;
-  }
+.dark {
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #121212;
+  --card-bg: #2c2c2e;
+  --preview-bg: #000000;
+  --text-primary: rgba(255, 255, 255, 0.87);
+  --text-secondary: rgba(255, 255, 255, 0.6);
 }
 
 * {
