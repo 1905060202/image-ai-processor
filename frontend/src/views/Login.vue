@@ -140,16 +140,12 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Ported styles from login.html */
-.login-page {
-  --font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --radius-large: 24px;
-  --radius-medium: 14px;
-  --radius-small: 8px;
-  --transition-spring: 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-  --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  
-  /* Light Mode */
+/* =================================================================
+   1. 核心修复：将 CSS 变量定义提升到全局根作用域
+   注意：千万不要在 .login-page {} 里面再次定义这些变量，否则会覆盖暗黑模式
+   ================================================================= */
+:global(:root) {
+  /* --- 亮色模式 (Light Mode) --- */
   --bg-color: #fbfbfd;
   --card-bg: rgba(255, 255, 255, 0.8);
   --text-primary: #1d1d1f;
@@ -161,33 +157,71 @@ onMounted(() => {
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
   --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.08);
   --error-color: #ff3b30;
+  
+  /* 背景光球颜色 */
+  --blob-color-1: var(--accent-color);
+  --blob-color-2: #bf5af2;
+  --blob-opacity: 0.15; /* 亮色模式光球浓度 */
 
-  font-family: var(--font-family);
+  /* 通用设置 */
+  --font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --radius-large: 24px;
+  --radius-medium: 14px;
+  --radius-small: 8px;
+  --transition-spring: 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- 暗黑模式 (Dark Mode) --- */
+:global(html.dark) {
+  --bg-color: #000000;
+  --card-bg: rgba(28, 28, 30, 0.7); /* 稍微增加透明度 */
+  --text-primary: #f5f5f7;
+  --text-secondary: #a1a1a6;
+  --accent-color: #2997ff;
+  --accent-hover: #47aaff;
+  --border-color: rgba(255, 255, 255, 0.15);
+  --input-bg: rgba(255, 255, 255, 0.1);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.6);
+
+  /* 2. 视觉优化：暗黑模式下，光球如果太亮会像雾霾，这里调低不透明度并加深颜色 */
+  --blob-color-1: #0a84ff; 
+  --blob-color-2: #5e5ce6;
+  --blob-opacity: 0.25; /* 暗色模式稍微亮一点点因为背景黑 */
+}
+
+/* =================================================================
+   3. 全局 Body 重置 (防止白边)
+   ================================================================= */
+:global(body) {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-color);
+  transition: background-color 0.3s ease;
+}
+
+/* =================================================================
+   4. 组件样式 (只使用变量，不定义变量)
+   ================================================================= */
+.login-page {
+  width: 100vw;
+  min-height: 100vh;
+  
   background-color: var(--bg-color);
   color: var(--text-primary);
-  min-height: 100vh;
+  font-family: var(--font-family);
+  
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color var(--transition-smooth);
+  transition: background-color var(--transition-smooth), color var(--transition-smooth);
   overflow: hidden;
   position: relative;
+  box-sizing: border-box;
 }
 
-:global(html.dark) .login-page {
-  --bg-color: #000000;
-  --card-bg: rgba(28, 28, 30, 0.8);
-  --text-primary: #f5f5f7;
-  --text-secondary: #86868b;
-  --accent-color: #2997ff;
-  --accent-hover: #47aaff;
-  --border-color: rgba(255, 255, 255, 0.1);
-  --input-bg: rgba(255, 255, 255, 0.05);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
-  --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.4);
-}
-
-/* Ambient Background Animation */
+/* 背景光球动画 */
 .login-page::before, .login-page::after {
   content: '';
   position: absolute;
@@ -195,17 +229,20 @@ onMounted(() => {
   height: 600px;
   border-radius: 50%;
   filter: blur(80px);
-  opacity: 0.15;
+  opacity: var(--blob-opacity); /* 使用变量控制浓度 */
   z-index: 0;
   animation: float 10s ease-in-out infinite alternate;
+  pointer-events: none;
 }
+
 .login-page::before {
-  background: var(--accent-color);
+  background: var(--blob-color-1);
   top: -100px;
   left: -100px;
 }
+
 .login-page::after {
-  background: #bf5af2;
+  background: var(--blob-color-2);
   bottom: -100px;
   right: -100px;
   animation-delay: -5s;
@@ -236,6 +273,7 @@ onMounted(() => {
   animation: cardEntrance 0.8s var(--transition-spring) forwards;
   opacity: 0;
   transform: translateY(20px) scale(0.95);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 @keyframes cardEntrance {
@@ -251,6 +289,7 @@ h1 {
   font-size: 28px;
   font-weight: 700;
   margin: 0 0 8px 0;
+  /* 确保文字渐变使用了当前模式的文字颜色 */
   background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -278,13 +317,14 @@ h1 {
   color: var(--text-primary);
   transition: all 0.2s ease;
   font-family: inherit;
+  box-sizing: border-box;
 }
 
 .form-control:focus {
   outline: none;
-  background: var(--bg-color);
+  background: var(--bg-color); /* 聚焦时使用当前背景色 */
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.15);
+  box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.15); /* 这里的阴影颜色也可以考虑用变量，目前暂保留 */
   transform: scale(1.01);
 }
 
@@ -327,19 +367,18 @@ h1 {
 
 .btn-primary {
   background: var(--accent-color);
-  color: white;
-  box-shadow: 0 4px 12px rgba(0, 102, 204, 0.2);
+  color: white; /* 按钮文字保持白色 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* 稍微通用一点的阴影 */
 }
 
 .btn-primary:hover {
   background: var(--accent-hover);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(0, 102, 204, 0.3);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
 .btn-primary:active {
   transform: translateY(1px);
-  box-shadow: 0 2px 8px rgba(0, 102, 204, 0.2);
 }
 
 .btn-primary:disabled {
