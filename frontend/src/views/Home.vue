@@ -116,8 +116,19 @@
         </div>
         
         <div class="history-grid" v-if="historyImages.length > 0">
-          <div v-for="img in historyImages" :key="img.id" class="history-item" @click="selectHistory(img)">
-            <img :src="img.url" :alt="img.prompt" loading="lazy">
+          <div v-for="img in historyImages" :key="img.id" class="history-item">
+            <img :src="img.url" :alt="img.prompt" loading="lazy" @click="selectHistory(img)">
+            <div class="history-item-actions">
+              <a-tooltip title="预览">
+                <eye-outlined @click="previewImage(img)" />
+              </a-tooltip>
+              <a-tooltip title="下载">
+                <download-outlined @click="downloadImage(img)" />
+              </a-tooltip>
+              <a-tooltip title="重命名">
+                <edit-outlined @click="renameImage(img)" />
+              </a-tooltip>
+            </div>
           </div>
         </div>
         <div v-else class="no-history">
@@ -144,12 +155,32 @@
       </div>
     </div>
   </div>
+
+  <!-- Preview Modal -->
+  <a-modal v-model:open="previewVisible" :footer="null" width="80%" :closable="true" @cancel="previewVisible = false">
+    <img :src="previewImageUrl" alt="Preview" style="width: 100%; height: auto; border-radius: 8px;" />
+  </a-modal>
+
+  <!-- Rename Modal -->
+  <a-modal v-model:open="renameVisible" title="重命名图片" @ok="handleRenameOk" @cancel="renameVisible = false">
+    <a-input v-model:value="renameText" placeholder="输入新的文件名" />
+  </a-modal>
 </template>
 
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { message } from 'ant-design-vue'
-import { CloudUploadOutlined, DeleteOutlined, PictureOutlined, SearchOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons-vue'
+import { 
+  CloudUploadOutlined, 
+  DeleteOutlined, 
+  PictureOutlined, 
+  SearchOutlined, 
+  LeftOutlined, 
+  RightOutlined,
+  EyeOutlined,
+  DownloadOutlined,
+  EditOutlined
+} from '@ant-design/icons-vue'
 import axios from 'axios'
 import { useUserStore } from '@/stores/user'
 
@@ -169,6 +200,16 @@ const historyPage = ref(1)
 const historyTotalPages = ref(1)
 const historySearch = ref('')
 const historyLoading = ref(false)
+
+// Preview Modal State
+const previewVisible = ref(false)
+const previewImageUrl = ref('')
+const previewImageObject = ref(null)
+
+// Rename Modal State
+const renameVisible = ref(false)
+const renameText = ref('')
+const renameImageObject = ref(null)
 
 // File Upload State
 const fileInput = ref(null)
@@ -293,6 +334,76 @@ const changeHistoryPage = (delta) => {
   }
 }
 
+// New functions for image actions
+const previewImage = (img) => {
+  previewImageUrl.value = img.url
+  previewImageObject.value = img
+  previewVisible.value = true
+}
+
+const downloadImage = (img) => {
+  const link = document.createElement('a')
+  link.href = img.url
+  link.download = img.filename
+  link.click()
+  message.success('图片下载已开始')
+}
+
+const renameImage = (img) => {
+  renameImageObject.value = img
+  // Remove extension for cleaner display
+  const lastDotIndex = img.filename.lastIndexOf('.')
+  renameText.value = lastDotIndex !== -1 ? img.filename.substring(0, lastDotIndex) : img.filename
+  renameVisible.value = true
+}
+
+const handleRenameOk = async () => {
+  if (!renameText.value.trim()) {
+    message.warning('请输入文件名')
+    return;
+  }
+
+  try {
+    // Get extension from original filename
+    const lastDotIndex = renameImageObject.value.filename.lastIndexOf('.');
+    const extension = lastDotIndex !== -1 ? renameImageObject.value.filename.substring(lastDotIndex) : '';
+    const newFilename = renameText.value + extension;
+    
+    // Check if new filename is the same as the old one
+    if (renameImageObject.value.filename === newFilename) {
+      message.info('文件名未改变');
+      renameVisible.value = false;
+      return;
+    }
+    
+    // Use PATCH method with filename as parameter, not ID
+    const response = await axios.patch(`/api/v1/images/${renameImageObject.value.filename}`, {
+      newFilename: newFilename
+    });
+    
+    message.success('重命名成功');
+    renameVisible.value = false;
+    fetchHistory(); // Refresh history
+    
+    // Update the renamed image in the history list without reloading
+    const imageIndex = historyImages.value.findIndex(img => img.filename === renameImageObject.value.filename);
+    if (imageIndex !== -1) {
+      historyImages.value[imageIndex].filename = response.data.newFilename;
+      historyImages.value[imageIndex].url = `/generated/${response.data.newFilename}`;
+    }
+  } catch (err) {
+    console.error('Failed to rename image', err);
+    // Handle specific error codes
+    if (err.response?.status === 409) {
+      message.error('文件名已存在，请换一个');
+    } else if (err.response?.status === 404) {
+      message.error('原始记录未找到或无权操作');
+    } else {
+      message.error(err.response?.data?.error || '重命名失败');
+    }
+  }
+}
+
 // Watchers
 watch(historySearch, () => {
   historyPage.value = 1
@@ -302,6 +413,7 @@ watch(historySearch, () => {
 onMounted(() => {
   fetchHistory()
 })
+
 </script>
 
 <style scoped>
@@ -383,7 +495,7 @@ onMounted(() => {
 }
 
 .card {
-  background: #fff;
+  background: var(--card-bg, #fff);
   border-radius: 20px;
   padding: 24px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.04);
@@ -401,13 +513,13 @@ onMounted(() => {
 h2, h3 {
   margin-bottom: 20px;
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--text-primary, #1d1d1f);
 }
 
 /* Mode Selector */
 .mode-selector {
   display: flex;
-  background: #f5f5f7;
+  background: var(--mode-selector-bg, #f5f5f7);
   padding: 4px;
   border-radius: 14px;
   margin-bottom: 24px;
@@ -420,13 +532,13 @@ h2, h3 {
   cursor: pointer;
   border-radius: 10px;
   font-weight: 500;
-  color: #86868b;
+  color: var(--mode-selector-color, #86868b);
   transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 .mode-selector label.active {
-  background: #fff;
-  color: #1d1d1f;
+  background: var(--mode-selector-active-bg, #fff);
+  color: var(--mode-selector-active-color, #1d1d1f);
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   font-weight: 600;
 }
@@ -443,7 +555,7 @@ h2, h3 {
   display: block;
   margin-bottom: 8px;
   font-weight: 500;
-  color: #1d1d1f;
+  color: var(--text-primary, #1d1d1f);
   font-size: 14px;
 }
 
@@ -458,7 +570,7 @@ h2, h3 {
 
 /* File Upload */
 .file-upload-wrapper {
-  border: 2px dashed #d2d2d7;
+  border: 2px dashed var(--upload-border, #d2d2d7);
   border-radius: 16px;
   min-height: 140px;
   display: flex;
@@ -466,14 +578,14 @@ h2, h3 {
   justify-content: center;
   cursor: pointer;
   transition: all 0.3s;
-  background: #fafafa;
+  background: var(--upload-bg, #fafafa);
   overflow: hidden;
   position: relative;
 }
 
 .file-upload-wrapper:hover, .file-upload-wrapper.dragover {
-  border-color: #007aff;
-  background: #f0f8ff;
+  border-color: var(--upload-border-hover, #007aff);
+  background: var(--upload-bg-hover, #f0f8ff);
 }
 
 .upload-placeholder {
@@ -481,7 +593,7 @@ h2, h3 {
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  color: #86868b;
+  color: var(--upload-placeholder-color, #86868b);
 }
 
 .uploaded-preview {
@@ -534,7 +646,7 @@ h2, h3 {
 
 .preview-box {
   flex: 1;
-  background: #f5f5f7;
+  background: var(--preview-bg, #f5f5f7);
   border-radius: 16px;
   display: flex;
   align-items: center;
@@ -545,12 +657,12 @@ h2, h3 {
 }
 
 .preview-box.has-image {
-  background: #000;
+  background: var(--preview-has-image-bg, #000);
 }
 
 .placeholder {
   text-align: center;
-  color: #86868b;
+  color: var(--placeholder-color, #86868b);
 }
 
 .result-image {
@@ -563,7 +675,7 @@ h2, h3 {
 .loading-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(255,255,255,0.85);
+  background: var(--loading-overlay-bg, rgba(255,255,255,0.85));
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
@@ -574,23 +686,25 @@ h2, h3 {
 /* History */
 .history-section {
   flex: 1;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: var(--card-bg, #fff);
   border-radius: 20px;
   padding: 24px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.04);
   border: 1px solid rgba(0,0,0,0.02);
+  max-height: 400px; /* 固定高度，出现滚动 */
+  overflow-y: auto;   /* 垂直滚动 */
 }
 
 .history-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 16px;
   overflow-y: auto;
   padding: 4px; /* Prevent shadow cut-off */
   flex: 1; /* Ensure it takes available space */
+  align-content: flex-start; /* Align items to start */
 }
 
 .history-item {
@@ -603,10 +717,37 @@ h2, h3 {
   box-shadow: 0 4px 12px rgba(0,0,0,0.08);
   position: relative;
   min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 添加操作按钮层 */
+.history-item .action-overlay {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.history-item:hover .action-overlay {
+  opacity: 1;
+}
+
+.action-overlay button {
+  background: rgba(0,0,0,0.5);
+  border: none;
+  color: #fff;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 .history-item:hover {
-  border-color: #007aff;
+  border-color: var(--history-item-hover-border, #007aff);
   transform: translateY(-4px);
   box-shadow: 0 12px 24px rgba(0,0,0,0.12);
 }
@@ -620,6 +761,35 @@ h2, h3 {
 
 .history-item:hover img {
   transform: scale(1.1);
+}
+
+.history-item-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 8px;
+  padding: 4px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.history-item:hover .history-item-actions {
+  opacity: 1;
+}
+
+.history-item-actions .anticon {
+  color: white;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.history-item-actions .anticon:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .history-header {
@@ -642,11 +812,11 @@ h2, h3 {
   margin-top: 20px;
   gap: 16px;
   padding-top: 16px;
-  border-top: 1px solid #f5f5f7;
+  border-top: 1px solid var(--pagination-border, #f5f5f7);
 }
 
 .page-info {
-  color: #86868b;
+  color: var(--pagination-color, #86868b);
   font-size: 14px;
   font-weight: 500;
 }
@@ -656,7 +826,77 @@ h2, h3 {
   justify-content: center;
   align-items: center;
   height: 100%;
-  color: #86868b;
+  color: var(--no-history-color, #86868b);
   flex: 1;
+}
+
+/* Dark mode styles */
+:global(.dark) .card {
+  background: var(--card-bg-dark, #1c1c1e);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+:global(.dark) h2, :global(.dark) h3 {
+  color: var(--text-primary-dark, #f5f5f7);
+}
+
+:global(.dark) .mode-selector {
+  background: var(--mode-selector-bg-dark, #2c2c2e);
+}
+
+:global(.dark) .mode-selector label {
+  color: var(--mode-selector-color-dark, #aaa);
+}
+
+:global(.dark) .mode-selector label.active {
+  background: var(--mode-selector-active-bg-dark, #3a3a3c);
+  color: var(--mode-selector-active-color-dark, #f5f5f7);
+}
+
+:global(.dark) .file-upload-wrapper {
+  border: 2px dashed var(--upload-border-dark, #444);
+  background: var(--upload-bg-dark, #2c2c2e);
+}
+
+:global(.dark) .file-upload-wrapper:hover, :global(.dark) .file-upload-wrapper.dragover {
+  border-color: var(--upload-border-hover-dark, #2997ff);
+  background: var(--upload-bg-hover-dark, #3a3a3c);
+}
+
+:global(.dark) .upload-placeholder {
+  color: var(--upload-placeholder-color-dark, #aaa);
+}
+
+:global(.dark) .preview-box {
+  background: var(--preview-bg-dark, #2c2c2e);
+}
+
+:global(.dark) .preview-box.has-image {
+  background: var(--preview-has-image-bg-dark, #000);
+}
+
+:global(.dark) .placeholder {
+  color: var(--placeholder-color-dark, #aaa);
+}
+
+:global(.dark) .loading-overlay {
+  background: var(--loading-overlay-bg-dark, rgba(28,28,30,0.85));
+}
+
+:global(.dark) .history-section {
+  background: var(--card-bg-dark, #1c1c1e);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+:global(.dark) .pagination-controls {
+  border-top: 1px solid var(--pagination-border-dark, #3a3a3c);
+}
+
+:global(.dark) .page-info {
+  color: var(--pagination-color-dark, #aaa);
+}
+
+:global(.dark) .no-history {
+  color: var(--no-history-color-dark, #aaa);
 }
 </style>
