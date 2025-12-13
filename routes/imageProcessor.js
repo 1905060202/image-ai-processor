@@ -148,18 +148,32 @@ router.post('/upload', upload.array('images', 10), async (req, res) => {
     }
 
     // 调用 AI 服务 (现在可以传递 base64 数组)
+    // 支持 doubao, doubao-4.0, doubao-4.5
     const provider = (providerRaw || process.env.IMAGE_PROVIDER || '').toLowerCase();
     const size = sizeRaw || process.env.DOUBAO_IMAGE_SIZE || '1024x1024';
     let result;
-    if (provider === 'doubao') {
+
+    if (provider.startsWith('doubao')) {
       if (!doubaoClient) {
         throw new Error('未配置 DOUBAO_API_KEY');
       }
-      if (!process.env.DOUBAO_IMAGE_MODEL) {
-        return res.status(400).json({ error: '缺少 DOUBAO_IMAGE_MODEL', hint: '请在环境变量中设置豆包模型ID，例如 ep-xxxxxxxx' });
+
+      let modelId = process.env.DOUBAO_IMAGE_MODEL; // Default to 4.0/Standard
+      if (provider === 'doubao-4.5') {
+        modelId = process.env.DOUBAO_IMAGE_MODEL_4_5;
+        if (!modelId) {
+          return res.status(400).json({ error: '未配置 Doubao 4.5 模型', hint: '请在环境变量中设置 DOUBAO_IMAGE_MODEL_4_5' });
+        }
+      } else {
+        // doubao or doubao-4.0
+        if (!modelId) {
+          return res.status(400).json({ error: '缺少 DOUBAO_IMAGE_MODEL', hint: '请在环境变量中设置豆包模型ID' });
+        }
       }
+
       // 使用 generations JSON 接口进行图生图（取第一张）
-      result = await doubaoClient.generateFromImageEdits(imagesBase64, prompt, { mimeType: 'image/jpeg', size });
+      // explicitly pass the chosen model ID
+      result = await doubaoClient.generateFromImageEdits(imagesBase64, prompt, { mimeType: 'image/jpeg', size, model: modelId });
     } else {
       result = await nanoBananaClient.generateFromImage(imagesBase64, prompt, { mimeType: 'image/jpeg' });
     }
@@ -236,14 +250,26 @@ router.post('/generate-text', async (req, res) => {
     let result;
     const provider = (providerRaw || process.env.IMAGE_PROVIDER || '').toLowerCase();
     const size = sizeRaw || process.env.DOUBAO_IMAGE_SIZE || '1024x1024';
-    if (provider === 'doubao') {
+
+    if (provider.startsWith('doubao')) {
       if (!doubaoClient) {
         return res.status(500).json({ error: '未配置 DOUBAO_API_KEY' });
       }
-      if (!process.env.DOUBAO_IMAGE_MODEL) {
-        return res.status(400).json({ error: '缺少 DOUBAO_IMAGE_MODEL', hint: '请在环境变量中设置豆包模型ID，例如 ep-xxxxxxxx' });
+
+      let modelId = process.env.DOUBAO_IMAGE_MODEL; // Default to 4.0/Standard
+      if (provider === 'doubao-4.5') {
+        modelId = process.env.DOUBAO_IMAGE_MODEL_4_5;
+        if (!modelId) {
+          return res.status(400).json({ error: '未配置 Doubao 4.5 模型', hint: '请在环境变量中设置 DOUBAO_IMAGE_MODEL_4_5' });
+        }
+      } else {
+        // doubao or doubao-4.0
+        if (!modelId) {
+          return res.status(400).json({ error: '缺少 DOUBAO_IMAGE_MODEL', hint: '请在环境变量中设置豆包模型ID' });
+        }
       }
-      result = await doubaoClient.generate(prompt, { size });
+
+      result = await doubaoClient.generate(prompt, { size, model: modelId });
     } else {
       result = await nanoBananaClient.generate(prompt);
     }

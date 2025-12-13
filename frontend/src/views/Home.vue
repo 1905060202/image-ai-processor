@@ -68,7 +68,8 @@
             <label class="section-label">模型</label>
             <!-- 移除额外的 div wrapper，直接放 a-select 并给宽度 -->
             <a-select v-model:value="provider" class="ios-select" :bordered="false" dropdownClassName="ios-dropdown">
-              <a-select-option value="doubao">豆包 (Pro)</a-select-option>
+              <a-select-option value="doubao-4.5">Doubao 4.5 (New)</a-select-option>
+              <a-select-option value="doubao-4.0">Doubao 4.0 (Pro)</a-select-option>
               <a-select-option value="nano">Nano (Fast)</a-select-option>
             </a-select>
           </div>
@@ -181,7 +182,7 @@ const userStore = useUserStore()
 // State
 const mode = ref('text-to-image')
 const prompt = ref('')
-const provider = ref('doubao')
+const provider = ref('doubao-4.5')
 const size = ref('1024x1024')
 const generating = ref(false)
 const generatedImage = ref(null)
